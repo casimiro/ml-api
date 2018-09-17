@@ -2,6 +2,7 @@ celery
 flask
 gunicorn
 redis
+requests
 sklearn
 webargs
 

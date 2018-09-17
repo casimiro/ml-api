@@ -18,7 +18,7 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-    command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "api:flask_app"]
+    command: gunicorn -w 4 -b 0.0.0.0:5000 api:flask_app
   celery:
     build: ./app
     volumes:

@@ -90,7 +90,7 @@ def predict(args, model_id):
         abort(404)
 
     if model_status == b'training':
-        return 'training'
+        return jsonify({'model_status': 'training'})
     else:
         model_data = pickle.loads(model_status)
         features = np.array([args[column] for column in model_data['positions']])
