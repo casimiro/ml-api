@@ -1,0 +1,23 @@
+version: '3'
+services:
+  redis:
+    image: redis:4.0-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+  api:
+    build: ./app
+    ports:
+      - "8000:5000"
+    volumes:
+      - ./app:/src
+    depends_on:
+      - redis
+    environment:
+      OPLOG: "True"
+      OPLOG_ENDPOINT: "oplog"
+      FLASK_APP: "api.py"
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "api:app"]

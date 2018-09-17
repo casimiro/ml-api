@@ -1,0 +1,7 @@
+celery
+flask
+gunicorn
+sklearn
+webargs
+
+pytest
