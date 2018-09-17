@@ -66,6 +66,7 @@ def training(features, classes, columns, model_id):
     model = linear_model.LogisticRegression()
     model.fit(features, classes)
     data = {'model': model, 'positions': columns}
+    redis_instance.set(model_id.int, pickle.dumps(data))
     return data
 
 
