@@ -1,8 +1,9 @@
 from celery import Celery
-from config import logging
 from flask import abort
 from flask import Flask
 from flask import jsonify
+import json
+from logging.config import dictConfig
 import numpy as np
 import pickle
 import redis
@@ -12,9 +13,38 @@ from webargs import fields
 from webargs.flaskparser import use_args
 from webargs.flaskparser import use_kwargs
 
+dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+        },
+    },
+    'handlers': {
+        'default': {
+            'level': 'INFO',
+            'formatter': 'standard',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['default'],
+            'level': 'INFO',
+            'propagate': True
+        },
+    }
+})
 
-app = Flask(__name__)
-app_queue = Celery(__name__, broker='redis://redis:6379/0')
+flask_app = Flask(__name__)
+app = Celery(__name__, backend='redis://redis', broker='redis://redis:6379/0')
+app.conf.task_serializer = 'pickle'
+app.conf.update(
+    task_serializer='pickle',
+    accept_content=['pickle'],
+    result_serializer='pickle',
+)
 redis_instance = redis.Redis(host='redis')
 
 train_args = {
@@ -31,27 +61,28 @@ predict_args = {
 }
 
 
-@app_queue.task
+@app.task
 def training(features, classes, columns, model_id):
     model = linear_model.LogisticRegression()
-    redis_instance.set(model_id.int, 'training')
     model.fit(features, classes)
     data = {'model': model, 'positions': columns}
-    redis_instance.set(model_id.int, pickle.dumps(data))
+    return data
 
 
-@app.route('/models', methods=['POST'])
+@flask_app.route('/models', methods=['POST'])
 @use_kwargs(train_args)
 def train(columns, features, classes):
-    logging.info('about to train')
+    flask_app.logger.info('about to train on dataset of %d rows', len(features))
     model_id = uuid.uuid1()
-    training(features, classes, columns, model_id)
+    redis_instance.set(model_id.int, 'training')
+    training.delay(features, classes, columns, model_id)
     return jsonify({'model_id': str(model_id)}), 201
 
 
-@app.route('/models/<uuid:model_id>', methods=['GET'])
+@flask_app.route('/models/<uuid:model_id>', methods=['GET'])
 @use_args(predict_args)
 def predict(args, model_id):
+    flask_app.logger.info('predicting on %s', json.dumps(args))
     id = uuid.UUID(str(model_id))
     model_status = redis_instance.get(id.int)
 
@@ -64,5 +95,4 @@ def predict(args, model_id):
         model_data = pickle.loads(model_status)
         features = np.array([args[column] for column in model_data['positions']])
         predicted_class = model_data['model'].predict(features.reshape(1, len(features)))
-        logging.info(predicted_class)
         return jsonify({'predicted_class': int(predicted_class[0])})
