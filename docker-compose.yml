@@ -14,8 +14,6 @@ services:
     depends_on:
       - redis
     environment:
-      OPLOG: "True"
-      OPLOG_ENDPOINT: "oplog"
       FLASK_APP: "api.py"
     deploy:
       restart_policy:

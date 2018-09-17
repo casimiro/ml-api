@@ -39,7 +39,6 @@ dictConfig({
 
 flask_app = Flask(__name__)
 app = Celery(__name__, backend='redis://redis', broker='redis://redis:6379/0')
-app.conf.task_serializer = 'pickle'
 app.conf.update(
     task_serializer='pickle',
     accept_content=['pickle'],
