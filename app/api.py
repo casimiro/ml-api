@@ -77,17 +77,22 @@ def train(columns, features, classes, penalty, solver):
     flask_app.logger.info('about to train on dataset of %d rows', len(features))
     model_id = uuid.uuid1()
     redis_instance.set(model_id.int, 'training')
-    training.delay(features, classes, columns, penalty, solver, model_id)
+    result = training.delay(features, classes, columns, penalty, solver, model_id)
+    redis_instance.set('task-%s' % model_id, result.id)  # save task id for deletion
+
     return jsonify({'model_id': str(model_id)}), 201
 
 
 @flask_app.route('/models/<uuid:model_id>', methods=['DELETE'])
-def delete_model(model_id):
+def delete(model_id):
     flask_app.logger.info('about to delete model %s', model_id)
     id = uuid.UUID(str(model_id))
     if redis_instance.delete(id.int) == 0:
         abort(404)
     else:
+        task_id = redis_instance.get('task-%s' % str(model_id))
+        if task_id is not None:
+            app.control.revoke(str(task_id))
         return jsonify({'status': 'model deleted'})
 
 
