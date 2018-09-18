@@ -81,6 +81,16 @@ def train(columns, features, classes, penalty, solver):
     return jsonify({'model_id': str(model_id)}), 201
 
 
+@flask_app.route('/models/<uuid:model_id>', methods=['DELETE'])
+def delete_model(model_id):
+    flask_app.logger.info('about to delete model %s', model_id)
+    id = uuid.UUID(str(model_id))
+    if redis_instance.delete(id.int) == 0:
+        abort(404)
+    else:
+        return jsonify({'status': 'model deleted'})
+
+
 @flask_app.route('/models/<uuid:model_id>', methods=['GET'])
 @use_args(predict_args)
 def predict(args, model_id):
