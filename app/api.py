@@ -49,7 +49,9 @@ redis_instance = redis.Redis(host='redis')
 train_args = {
     'columns': fields.List(fields.Str(), required=True),
     'features': fields.List(fields.List(fields.Float()), required=True),
-    'classes': fields.List(fields.Int(), required=True)
+    'classes': fields.List(fields.Int(), required=True),
+    'penalty': fields.Str(required=True),
+    'solver': fields.Str(required=True),
 }
 
 predict_args = {
@@ -61,8 +63,8 @@ predict_args = {
 
 
 @app.task
-def training(features, classes, columns, model_id):
-    model = linear_model.LogisticRegression()
+def training(features, classes, columns, penalty, solver, model_id):
+    model = linear_model.LogisticRegression(penalty=penalty, solver=solver)
     model.fit(features, classes)
     data = {'model': model, 'positions': columns}
     redis_instance.set(model_id.int, pickle.dumps(data))
@@ -71,11 +73,11 @@ def training(features, classes, columns, model_id):
 
 @flask_app.route('/models', methods=['POST'])
 @use_kwargs(train_args)
-def train(columns, features, classes):
+def train(columns, features, classes, penalty, solver):
     flask_app.logger.info('about to train on dataset of %d rows', len(features))
     model_id = uuid.uuid1()
     redis_instance.set(model_id.int, 'training')
-    training.delay(features, classes, columns, model_id)
+    training.delay(features, classes, columns, penalty, solver, model_id)
     return jsonify({'model_id': str(model_id)}), 201
 
 
