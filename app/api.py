@@ -93,6 +93,7 @@ def delete(model_id):
         task_id = redis_instance.get('task-%s' % str(model_id))
         if task_id is not None:
             app.control.revoke(str(task_id))
+            redis_instance.delete('task-%s' % str(model_id))
         return jsonify({'status': 'model deleted'})
 
 
