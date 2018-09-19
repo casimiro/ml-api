@@ -32,7 +32,7 @@ good to have them listed here:
    training and testing -- it might be a good a idea to do that, even though the client can do the separation
    on his/her side.
  - I'm currently using `pickle` as serialization method on celery. As pointed on Celery documentation it
-   can be exploited to run undesired code on host. As the application is running in a docker container,
-   that can be not a problem but it definitely deserves some investigation.  `pickle` was used in favor of
-   `json` as I didn't manage to make `sklearn.linear_model.Logisticregression` json serializable. As this
+   can be exploited to run undesired code on the application's host. As the application is running inside a docker container,
+   it may not be a problem but it definitely deserves some investigation.  `pickle` was used in favor of
+   `json` as I didn't manage to make `sklearn.linear_model.LogisticRegression` json serializable. As this
    was my first time playing with `Celery` (and `kombu`) I've had a hard time trying to do that. =)
